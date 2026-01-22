@@ -153,12 +153,12 @@ export const BlockWrapper = ({
       )}
       onClick={isEditMode && !isLayoutLocked ? onSelect : undefined}
     >
-      {/* Lock Indicator */}
-      {isEditMode && isLocked && (
+      {/* Lock Indicator - 내부 코드로만 유지 (UI 숨김) */}
+      {/* {isEditMode && isLocked && (
         <div className="absolute -top-2 -right-2 z-20 p-1 bg-warning/20 border border-warning/50 rounded-full">
           <Lock className="w-3 h-3 text-warning" />
         </div>
-      )}
+      )} */}
 
       {/* Edit Controls */}
       {isEditMode && isSelected && !isLayoutLocked && (
@@ -314,15 +314,15 @@ export const BlockWrapper = ({
             <ChevronDown className="w-4 h-4" />
           </Button>
 
-          {/* Lock Toggle */}
-          <Button 
+          {/* Lock Toggle - 내부 코드로만 유지 (UI 숨김) */}
+          {/* <Button 
             variant="ghost" 
             size="icon" 
             className={cn("h-7 w-7", isLocked && "text-warning")}
             onClick={(e) => { e.stopPropagation(); onUpdate({ locked: !isLocked }); }}
           >
             {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          </Button>
+          </Button> */}
           
           {/* Delete */}
           <Button 
