@@ -4,23 +4,15 @@ import { PageActions } from '@/components/PageActions';
 import { BlockWrapper } from '@/components/blocks/BlockWrapper';
 import { AddBlockButton } from '@/components/blocks/AddBlockButton';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { 
   Cpu, 
   Edit2, 
   Eye, 
-  Layers, 
-  Lock, 
-  Unlock,
-  ShieldCheck
+  Layers,
+  X
 } from 'lucide-react';
 import { TechPage } from '@/types/page-builder';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 // Default template for tech introduction pages
 const defaultTemplate: TechPage = {
@@ -144,88 +136,76 @@ export const TechPageBuilder = () => {
     duplicatePage,
   } = usePageBuilder(defaultTemplate);
 
-  const isLayoutLocked = page.layoutLocked || false;
+  // 레이아웃 잠금 기능은 내부 코드로 유지 (추후 활용)
+  const isLayoutLocked = false; // page.layoutLocked || false;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Bar */}
-      <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-primary">
-              <Cpu className="w-5 h-5" />
-              <span className="font-semibold">Tech Page Builder</span>
+      {/* Top Bar - View Mode */}
+      {!isEditMode && (
+        <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-primary">
+                <Cpu className="w-5 h-5" />
+                <span className="font-semibold">Tech Page Builder</span>
+              </div>
             </div>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Layers className="w-4 h-4" />
-              <span>{page.blocks.length} 블록</span>
+
+            <div className="flex items-center gap-4">
+              {/* Clear Edit Button */}
+              <Button 
+                onClick={() => setIsEditMode(true)}
+                className="gap-2"
+                size="lg"
+              >
+                <Edit2 className="w-4 h-4" />
+                페이지 편집하기
+              </Button>
             </div>
           </div>
+        </nav>
+      )}
 
-          <div className="flex items-center gap-4">
-            {/* Layout Lock Toggle */}
-            {isEditMode && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isLayoutLocked ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={toggleLayoutLock}
-                    className={cn(
-                      "gap-2",
-                      isLayoutLocked && "bg-warning text-warning-foreground hover:bg-warning/90"
-                    )}
-                  >
-                    {isLayoutLocked ? (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        레이아웃 잠금
-                      </>
-                    ) : (
-                      <>
-                        <Unlock className="w-4 h-4" />
-                        레이아웃 열림
-                      </>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isLayoutLocked ? '레이아웃이 잠겨 있어 블록을 수정할 수 없습니다' : '레이아웃을 잠가 실수로 수정하는 것을 방지합니다'}</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+      {/* Top Bar - Edit Mode */}
+      {isEditMode && (
+        <nav className="sticky top-0 z-50 bg-primary/10 backdrop-blur border-b border-primary/30">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-primary">
+                <Edit2 className="w-5 h-5" />
+                <span className="font-semibold">편집 모드</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Layers className="w-4 h-4" />
+                <span>{page.blocks.length} 블록</span>
+              </div>
+            </div>
 
-            {/* Edit Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-muted-foreground" />
-              <Switch
-                checked={isEditMode}
-                onCheckedChange={setIsEditMode}
-                className="data-[state=checked]:bg-primary"
+            <div className="flex items-center gap-4">
+              {/* Page Actions */}
+              <PageActions
+                page={page}
+                onSave={savePage}
+                onExport={exportPage}
+                onImport={importPage}
+                onDuplicate={duplicatePage}
               />
-              <Edit2 className="w-4 h-4 text-muted-foreground" />
+
+              {/* Exit Edit Mode */}
+              <Button 
+                variant="outline"
+                onClick={() => setIsEditMode(false)}
+                className="gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                미리보기
+              </Button>
             </div>
-
-            {/* Page Actions */}
-            <PageActions
-              page={page}
-              onSave={savePage}
-              onExport={exportPage}
-              onImport={importPage}
-              onDuplicate={duplicatePage}
-            />
           </div>
-        </div>
-
-        {/* Layout Locked Banner */}
-        {isEditMode && isLayoutLocked && (
-          <div className="bg-warning/10 border-t border-warning/30 px-6 py-2 flex items-center justify-center gap-2 text-sm text-warning">
-            <ShieldCheck className="w-4 h-4" />
-            <span>레이아웃이 잠겨 있습니다. 블록을 수정하려면 잠금을 해제하세요.</span>
-          </div>
-        )}
-      </nav>
+        </nav>
+      )}
 
       {/* Page Header */}
       <PageHeader
