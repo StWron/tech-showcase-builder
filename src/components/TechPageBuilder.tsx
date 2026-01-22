@@ -5,9 +5,22 @@ import { BlockWrapper } from '@/components/blocks/BlockWrapper';
 import { AddBlockButton } from '@/components/blocks/AddBlockButton';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Cpu, Edit2, Eye, Layers } from 'lucide-react';
-import { TechPage, BlockType } from '@/types/page-builder';
+import { 
+  Cpu, 
+  Edit2, 
+  Eye, 
+  Layers, 
+  Lock, 
+  Unlock,
+  ShieldCheck
+} from 'lucide-react';
+import { TechPage } from '@/types/page-builder';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Default template for tech introduction pages
 const defaultTemplate: TechPage = {
@@ -16,6 +29,7 @@ const defaultTemplate: TechPage = {
   subtitle: '직업훈련 부트캠프에서 활용되는 핵심 기술을 소개합니다',
   category: '범용 기술',
   lastModified: new Date().toISOString(),
+  layoutLocked: false,
   blocks: [
     {
       id: 'intro-heading',
@@ -123,11 +137,14 @@ export const TechPageBuilder = () => {
     deleteBlock,
     moveBlock,
     updatePageMeta,
+    toggleLayoutLock,
     savePage,
     exportPage,
     importPage,
     duplicatePage,
   } = usePageBuilder(defaultTemplate);
+
+  const isLayoutLocked = page.layoutLocked || false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,6 +164,38 @@ export const TechPageBuilder = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Layout Lock Toggle */}
+            {isEditMode && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={isLayoutLocked ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={toggleLayoutLock}
+                    className={cn(
+                      "gap-2",
+                      isLayoutLocked && "bg-warning text-warning-foreground hover:bg-warning/90"
+                    )}
+                  >
+                    {isLayoutLocked ? (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        레이아웃 잠금
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-4 h-4" />
+                        레이아웃 열림
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isLayoutLocked ? '레이아웃이 잠겨 있어 블록을 수정할 수 없습니다' : '레이아웃을 잠가 실수로 수정하는 것을 방지합니다'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
             {/* Edit Mode Toggle */}
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4 text-muted-foreground" />
@@ -168,12 +217,20 @@ export const TechPageBuilder = () => {
             />
           </div>
         </div>
+
+        {/* Layout Locked Banner */}
+        {isEditMode && isLayoutLocked && (
+          <div className="bg-warning/10 border-t border-warning/30 px-6 py-2 flex items-center justify-center gap-2 text-sm text-warning">
+            <ShieldCheck className="w-4 h-4" />
+            <span>레이아웃이 잠겨 있습니다. 블록을 수정하려면 잠금을 해제하세요.</span>
+          </div>
+        )}
       </nav>
 
       {/* Page Header */}
       <PageHeader
         page={page}
-        isEditMode={isEditMode}
+        isEditMode={isEditMode && !isLayoutLocked}
         onUpdateMeta={updatePageMeta}
       />
 
@@ -187,6 +244,7 @@ export const TechPageBuilder = () => {
                 key={block.id}
                 block={block}
                 isEditMode={isEditMode}
+                isLayoutLocked={isLayoutLocked}
                 isSelected={selectedBlockId === block.id}
                 onSelect={() => setSelectedBlockId(block.id)}
                 onUpdate={(updates) => updateBlock(block.id, updates)}
@@ -197,7 +255,7 @@ export const TechPageBuilder = () => {
             ))}
 
           {/* Add Block Button */}
-          {isEditMode && (
+          {isEditMode && !isLayoutLocked && (
             <div className="pt-8">
               <AddBlockButton onAddBlock={(type) => addBlock(type)} />
             </div>

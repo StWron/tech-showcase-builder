@@ -105,10 +105,18 @@ export const usePageBuilder = (initialPage?: TechPage) => {
     });
   }, []);
 
-  const updatePageMeta = useCallback((updates: Partial<Pick<TechPage, 'title' | 'subtitle' | 'category'>>) => {
+  const updatePageMeta = useCallback((updates: Partial<Pick<TechPage, 'title' | 'subtitle' | 'category' | 'layoutLocked'>>) => {
     setPage((prev) => ({
       ...prev,
       ...updates,
+      lastModified: new Date().toISOString(),
+    }));
+  }, []);
+
+  const toggleLayoutLock = useCallback(() => {
+    setPage((prev) => ({
+      ...prev,
+      layoutLocked: !prev.layoutLocked,
       lastModified: new Date().toISOString(),
     }));
   }, []);
@@ -169,6 +177,7 @@ export const usePageBuilder = (initialPage?: TechPage) => {
     deleteBlock,
     moveBlock,
     updatePageMeta,
+    toggleLayoutLock,
     savePage,
     loadPage,
     exportPage,

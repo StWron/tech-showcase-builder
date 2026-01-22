@@ -2,11 +2,35 @@ export type BlockType = 'heading' | 'text' | 'image' | 'video' | 'code' | 'divid
 
 export type BlockSize = 'small' | 'medium' | 'large' | 'full';
 
+export type BlockAlignment = 'left' | 'center' | 'right';
+
+export type BlockColor = 
+  | 'default' 
+  | 'primary' 
+  | 'secondary' 
+  | 'accent' 
+  | 'muted'
+  | 'success'
+  | 'warning'
+  | 'destructive';
+
+export interface BlockStyle {
+  backgroundColor?: BlockColor;
+  textColor?: BlockColor;
+  borderColor?: BlockColor;
+  hasBorder?: boolean;
+  hasShadow?: boolean;
+  padding?: 'none' | 'small' | 'medium' | 'large';
+}
+
 export interface BaseBlock {
   id: string;
   type: BlockType;
   size: BlockSize;
   order: number;
+  alignment?: BlockAlignment;
+  style?: BlockStyle;
+  locked?: boolean;
 }
 
 export interface HeadingBlock extends BaseBlock {
@@ -65,6 +89,7 @@ export interface TechPage {
   category: string;
   lastModified: string;
   blocks: ContentBlock[];
+  layoutLocked?: boolean;
 }
 
 export interface PageTemplate {
