@@ -218,21 +218,31 @@ export const GridCanvas = ({
         />
       )}
 
-      {/* 블록들 */}
-      <div className="grid grid-cols-12 gap-4 auto-rows-min">
+      {/* 블록들 - 절대 위치로 격자에 고정 */}
+      <div 
+        className="relative w-full"
+        style={{
+          minHeight: `${(Math.max(...Array.from(gridPositions.values()).map(p => p.row), 0) + 3) * GRID_ROW_HEIGHT}px`,
+        }}
+      >
         {sortedBlocks.map((block) => {
           const position = gridPositions.get(block.id);
           const span = position?.columnSpan || getDefaultSpan(block.type);
+          const column = position?.column || 1;
+          const row = position?.row || 0;
 
           return (
             <div
               key={block.id}
               className={cn(
-                'transition-all duration-200',
+                'absolute transition-all duration-200',
                 draggingId === block.id && 'opacity-50',
               )}
               style={{
-                gridColumn: `span ${span} / span ${span}`,
+                left: `${((column - 1) / GRID_COLUMNS) * 100}%`,
+                top: `${row * GRID_ROW_HEIGHT}px`,
+                width: `${(span / GRID_COLUMNS) * 100}%`,
+                padding: '0 8px',
               }}
               draggable={isEditMode}
               onDragStart={(e) => handleDragStart(e, block.id)}
