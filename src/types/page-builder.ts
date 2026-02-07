@@ -23,6 +23,13 @@ export interface BlockStyle {
   padding?: 'none' | 'small' | 'medium' | 'large';
 }
 
+// 격자 배치를 위한 그리드 위치 정보
+export interface GridPosition {
+  column: number;     // 1-12 (12열 그리드)
+  columnSpan: number; // 블록이 차지하는 열 수 (1-12)
+  row: number;        // 행 위치 (자동 계산 가능)
+}
+
 export interface BaseBlock {
   id: string;
   type: BlockType;
@@ -31,6 +38,7 @@ export interface BaseBlock {
   alignment?: BlockAlignment;
   style?: BlockStyle;
   locked?: boolean;
+  gridPosition?: GridPosition; // 격자 위치 (선택적)
 }
 
 export interface HeadingBlock extends BaseBlock {
