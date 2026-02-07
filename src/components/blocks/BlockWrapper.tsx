@@ -40,6 +40,9 @@ interface BlockWrapperProps {
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  // 격자 레이아웃용 props
+  gridSpan?: number;
+  onResizeGrid?: (newSpan: number) => void;
 }
 
 const sizeClasses: Record<BlockSize, string> = {
@@ -94,6 +97,8 @@ export const BlockWrapper = ({
   onDelete,
   onMoveUp,
   onMoveDown,
+  gridSpan,
+  onResizeGrid,
 }: BlockWrapperProps) => {
   const style = block.style || {};
   const alignment = block.alignment || 'left';
@@ -140,12 +145,15 @@ export const BlockWrapper = ({
   const borderClass = style.borderColor ? colorClasses[style.borderColor].border : 'border-border';
   const paddingClass = paddingClasses[style.padding || 'medium'];
 
+  // 격자 모드일 때는 sizeClasses 대신 그리드 스팬으로 크기 제어
+  const useGridMode = !!onResizeGrid;
+
   return (
     <div
       className={cn(
-        'group relative transition-all duration-200 animate-fade-in',
-        sizeClasses[block.size],
-        alignmentClasses[alignment],
+        'group relative transition-all duration-200 animate-fade-in w-full',
+        !useGridMode && sizeClasses[block.size],
+        !useGridMode && alignmentClasses[alignment],
         isEditMode && !isLocked && 'cursor-pointer',
         isEditMode && !isSelected && !isLocked && 'hover:ring-1 hover:ring-primary/30 rounded-lg',
         isSelected && !isLayoutLocked && 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-lg',
@@ -169,22 +177,45 @@ export const BlockWrapper = ({
             <span className="text-xs text-muted-foreground">{blockTypeNames[block.type]}</span>
           </div>
           
-          {/* Size Control */}
-          <Select
-            value={block.size}
-            onValueChange={(value) => onUpdate({ size: value as BlockSize })}
-            disabled={isLocked}
-          >
-            <SelectTrigger className="w-16 h-7 text-xs bg-secondary border-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="small">소</SelectItem>
-              <SelectItem value="medium">중</SelectItem>
-              <SelectItem value="large">대</SelectItem>
-              <SelectItem value="full">전체</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Grid Span Control (격자 너비) */}
+          {onResizeGrid && (
+            <Select
+              value={String(gridSpan || 6)}
+              onValueChange={(value) => onResizeGrid(Number(value))}
+              disabled={isLocked}
+            >
+              <SelectTrigger className="w-20 h-7 text-xs bg-secondary border-none">
+                <SelectValue placeholder="너비" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3열</SelectItem>
+                <SelectItem value="4">4열</SelectItem>
+                <SelectItem value="6">6열</SelectItem>
+                <SelectItem value="8">8열</SelectItem>
+                <SelectItem value="10">10열</SelectItem>
+                <SelectItem value="12">전체</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          
+          {/* Legacy Size Control (격자 없을 때) */}
+          {!onResizeGrid && (
+            <Select
+              value={block.size}
+              onValueChange={(value) => onUpdate({ size: value as BlockSize })}
+              disabled={isLocked}
+            >
+              <SelectTrigger className="w-16 h-7 text-xs bg-secondary border-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">소</SelectItem>
+                <SelectItem value="medium">중</SelectItem>
+                <SelectItem value="large">대</SelectItem>
+                <SelectItem value="full">전체</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Alignment Controls */}
           <div className="flex items-center border-l border-r border-border px-1">

@@ -1,7 +1,7 @@
 import { usePageBuilder } from '@/hooks/usePageBuilder';
 import { PageHeader } from '@/components/PageHeader';
 import { PageActions } from '@/components/PageActions';
-import { BlockWrapper } from '@/components/blocks/BlockWrapper';
+import { GridCanvas } from '@/components/blocks/GridCanvas';
 import { AddBlockButton } from '@/components/blocks/AddBlockButton';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,10 +9,9 @@ import {
   Edit2, 
   Eye, 
   Layers,
-  X
+  Grid3X3
 } from 'lucide-react';
 import { TechPage } from '@/types/page-builder';
-import { cn } from '@/lib/utils';
 
 // Default template for tech introduction pages
 const defaultTemplate: TechPage = {
@@ -129,7 +128,6 @@ export const TechPageBuilder = () => {
     deleteBlock,
     moveBlock,
     updatePageMeta,
-    toggleLayoutLock,
     savePage,
     exportPage,
     importPage,
@@ -215,32 +213,34 @@ export const TechPageBuilder = () => {
       />
 
       {/* Content Area */}
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="space-y-6">
-          {page.blocks
-            .sort((a, b) => a.order - b.order)
-            .map((block) => (
-              <BlockWrapper
-                key={block.id}
-                block={block}
-                isEditMode={isEditMode}
-                isLayoutLocked={isLayoutLocked}
-                isSelected={selectedBlockId === block.id}
-                onSelect={() => setSelectedBlockId(block.id)}
-                onUpdate={(updates) => updateBlock(block.id, updates)}
-                onDelete={() => deleteBlock(block.id)}
-                onMoveUp={() => moveBlock(block.id, 'up')}
-                onMoveDown={() => moveBlock(block.id, 'down')}
-              />
-            ))}
-
-          {/* Add Block Button */}
-          {isEditMode && !isLayoutLocked && (
-            <div className="pt-8">
-              <AddBlockButton onAddBlock={(type) => addBlock(type)} />
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        {/* 편집 모드 안내 */}
+        {isEditMode && (
+          <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Grid3X3 className="w-4 h-4 text-primary" />
+              <span>블록을 드래그하여 위치를 이동하고, 선택 후 너비를 조절할 수 있습니다.</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* 격자 기반 캔버스 */}
+        <GridCanvas
+          blocks={page.blocks}
+          isEditMode={isEditMode}
+          selectedBlockId={selectedBlockId}
+          onSelectBlock={setSelectedBlockId}
+          onUpdateBlock={updateBlock}
+          onDeleteBlock={deleteBlock}
+          onMoveBlock={moveBlock}
+        />
+
+        {/* Add Block Button */}
+        {isEditMode && !isLayoutLocked && (
+          <div className="pt-8">
+            <AddBlockButton onAddBlock={(type) => addBlock(type)} />
+          </div>
+        )}
 
         {/* Empty State */}
         {page.blocks.length === 0 && !isEditMode && (
@@ -262,7 +262,7 @@ export const TechPageBuilder = () => {
 
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-12">
-        <div className="max-w-5xl mx-auto px-6 text-center text-sm text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
           <p>Tech Page Builder • 직업훈련 부트캠프 기술 문서 시스템</p>
         </div>
       </footer>
