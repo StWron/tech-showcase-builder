@@ -2,6 +2,7 @@ import { usePageBuilder } from '@/hooks/usePageBuilder';
 import { PageHeader } from '@/components/PageHeader';
 import { PageActions } from '@/components/PageActions';
 import { CapabilityPanel } from '@/components/CapabilityPanel';
+import { PageLibrary } from '@/components/PageLibrary';
 import { GridCanvas } from '@/components/blocks/GridCanvas';
 import { AddBlockButton } from '@/components/blocks/AddBlockButton';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,12 @@ export const TechPageBuilder = () => {
     updatePageMeta,
     capabilities,
     setCapabilities,
+    savedPages,
+    refreshSavedPages,
     savePage,
+    loadPage,
+    deletePage,
+    newPage,
     exportSource,
     importSource,
     publishHtml,
@@ -191,6 +197,15 @@ export const TechPageBuilder = () => {
 
             <div className="flex items-center gap-4">
               {/* Page Actions */}
+              <PageLibrary
+                pages={savedPages}
+                currentPageId={page.id}
+                onOpen={loadPage}
+                onDelete={deletePage}
+                onNew={newPage}
+                onRefresh={refreshSavedPages}
+              />
+
               <CapabilityPanel
                 capabilities={capabilities}
                 summary={bakeSummary}

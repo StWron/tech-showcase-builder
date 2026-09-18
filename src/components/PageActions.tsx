@@ -18,7 +18,7 @@ import { BakeSummary } from '@/lib/bake';
 interface PageActionsProps {
   page: TechPage;
   capabilities: PageCapabilities;
-  onSave: () => string;
+  onSave: () => string | null;
   onExportSource: () => string;
   onImportSource: (raw: string) => boolean;
   onPublishHtml: () => string;
@@ -56,6 +56,12 @@ export const PageActions = ({
 
   const handleSave = () => {
     const id = onSave();
+    if (!id) {
+      toast.error('저장하지 못했습니다', {
+        description: '브라우저 저장 공간이 가득 찼거나 시크릿 모드일 수 있습니다. 소스 저장을 이용하세요.',
+      });
+      return;
+    }
     toast.success('페이지가 저장되었습니다', { description: `ID: ${id}` });
   };
 
@@ -110,11 +116,8 @@ export const PageActions = ({
   };
 
   const handleDuplicate = () => {
-    const newPage = onDuplicate();
-    const savedPages = JSON.parse(localStorage.getItem('techPages') || '{}');
-    savedPages[newPage.id] = { version: 1, page: newPage, capabilities };
-    localStorage.setItem('techPages', JSON.stringify(savedPages));
-    toast.success('페이지가 복제되었습니다', { description: newPage.title });
+    const copy = onDuplicate();
+    toast.success('사본을 만들어 편집 중입니다', { description: copy.title });
   };
 
   return (

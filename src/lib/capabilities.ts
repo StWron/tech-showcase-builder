@@ -110,3 +110,94 @@ export const toggleBlockType = (
     ? ALL_BLOCK_TYPES.filter((t) => t === type || capabilities.allowedBlockTypes.includes(t))
     : capabilities.allowedBlockTypes.filter((t) => t !== type),
 });
+
+/** 꺼져 있는 권한의 수 (블록 타입 + 기능). 목록과 패널이 같은 값을 쓰게 한다. */
+export const countDisabledCapabilities = (capabilities: PageCapabilities): number => {
+  const disabledTypes = ALL_BLOCK_TYPES.filter(
+    (type) => !capabilities.allowedBlockTypes.includes(type)
+  ).length;
+  const disabledFeatures = FEATURE_CAPABILITIES.filter(({ key }) => !capabilities[key]).length;
+  return disabledTypes + disabledFeatures;
+};
+
+export interface CapabilityPreset {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: PageCapabilities;
+}
+
+/**
+ * 자주 쓰는 배포 성격을 묶어둔 프리셋.
+ *
+ * 프리셋은 출발점일 뿐이고, 고르고 나서 개별 스위치를 계속 조정할 수 있다.
+ */
+export const CAPABILITY_PRESETS: CapabilityPreset[] = [
+  {
+    id: 'public',
+    name: '공개 배포',
+    description: '누구나 열람. 편집 경로 없음, 원본도 심지 않음.',
+    capabilities: {
+      allowedBlockTypes: [...ALL_BLOCK_TYPES],
+      editing: false,
+      codeCopy: true,
+      externalEmbeds: true,
+      showMeta: true,
+      showFooter: true,
+      sourceDownload: false,
+    },
+  },
+  {
+    id: 'internal',
+    name: '사내 열람',
+    description: '외부 임베드와 메타를 빼고 자료를 밖으로 덜 흘리는 구성.',
+    capabilities: {
+      allowedBlockTypes: [...ALL_BLOCK_TYPES],
+      editing: false,
+      codeCopy: true,
+      externalEmbeds: false,
+      showMeta: false,
+      showFooter: true,
+      sourceDownload: false,
+    },
+  },
+  {
+    id: 'handoff',
+    name: '편집자 전달',
+    description: '받는 쪽이 에디터로 다시 열어 이어서 작업할 수 있게 원본을 심는다.',
+    capabilities: {
+      allowedBlockTypes: [...ALL_BLOCK_TYPES],
+      editing: true,
+      codeCopy: true,
+      externalEmbeds: true,
+      showMeta: true,
+      showFooter: true,
+      sourceDownload: true,
+    },
+  },
+  {
+    id: 'handout',
+    name: '인쇄용 유인물',
+    description: '코드와 동영상을 빼고 읽는 내용만. 대화형 요소 없음.',
+    capabilities: {
+      allowedBlockTypes: ['heading', 'text', 'image', 'list', 'divider'],
+      editing: false,
+      codeCopy: false,
+      externalEmbeds: false,
+      showMeta: true,
+      showFooter: false,
+      sourceDownload: false,
+    },
+  },
+];
+
+/** 현재 권한과 정확히 일치하는 프리셋이 있으면 그 id */
+export const matchPreset = (capabilities: PageCapabilities): string | null => {
+  const key = (value: PageCapabilities) =>
+    JSON.stringify({
+      ...value,
+      allowedBlockTypes: ALL_BLOCK_TYPES.filter((type) => value.allowedBlockTypes.includes(type)),
+    });
+
+  return CAPABILITY_PRESETS.find((preset) => key(preset.capabilities) === key(capabilities))?.id ?? null;
+};

@@ -2,7 +2,10 @@ import { BlockType, PageCapabilities } from '@/types/page-builder';
 import {
   ALL_BLOCK_TYPES,
   BLOCK_TYPE_LABELS,
+  CAPABILITY_PRESETS,
   FEATURE_CAPABILITIES,
+  countDisabledCapabilities,
+  matchPreset,
   toggleBlockType,
 } from '@/lib/capabilities';
 import { BakeSummary } from '@/lib/bake';
@@ -25,11 +28,8 @@ interface CapabilityPanelProps {
 }
 
 export const CapabilityPanel = ({ capabilities, summary, onChange }: CapabilityPanelProps) => {
-  const disabledTypes = ALL_BLOCK_TYPES.filter(
-    (type) => !capabilities.allowedBlockTypes.includes(type)
-  );
-  const disabledFeatures = FEATURE_CAPABILITIES.filter(({ key }) => !capabilities[key]);
-  const offCount = disabledTypes.length + disabledFeatures.length;
+  const offCount = countDisabledCapabilities(capabilities);
+  const activePreset = matchPreset(capabilities);
 
   const handleBlockType = (type: BlockType, enabled: boolean) => {
     onChange(toggleBlockType(capabilities, type, enabled));
@@ -60,6 +60,34 @@ export const CapabilityPanel = ({ capabilities, summary, onChange }: CapabilityP
               끈 항목은 게시물에 <strong className="text-foreground">코드 자체가 들어가지 않습니다.</strong>{' '}
               열람자가 브라우저에서 무엇을 뒤집어도 되살릴 수 없습니다.
             </p>
+          </div>
+
+          <Separator />
+
+          {/* 프리셋 */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">프리셋</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {CAPABILITY_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  title={preset.description}
+                  onClick={() => onChange({ ...preset.capabilities })}
+                  className={cn(
+                    'text-left p-2 rounded-md border transition-colors',
+                    activePreset === preset.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-secondary/40 hover:border-primary/50'
+                  )}
+                >
+                  <span className="block text-xs font-medium">{preset.name}</span>
+                  <span className="block text-[10px] leading-snug text-muted-foreground mt-0.5">
+                    {preset.description}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <Separator />

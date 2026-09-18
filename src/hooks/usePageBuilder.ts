@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ContentBlock,
   TechPage,
@@ -8,6 +8,14 @@ import {
   PageSource,
 } from '@/types/page-builder';
 import { defaultCapabilities, normalizeCapabilities } from '@/lib/capabilities';
+import {
+  SavedPageSummary,
+  readAllPages,
+  readPage,
+  removePage,
+  summarize,
+  writePage,
+} from '@/lib/page-store';
 import { emitHtml, extractEmbeddedSource } from '@/lib/emit-html';
 import { summarizeBake } from '@/lib/bake';
 
@@ -54,6 +62,17 @@ export const usePageBuilder = (
   const [capabilities, setCapabilities] = useState<PageCapabilities>(
     initialCapabilities || defaultCapabilities()
   );
+
+  const [savedPages, setSavedPages] = useState<SavedPageSummary[]>([]);
+
+  const refreshSavedPages = useCallback(() => {
+    setSavedPages(readAllPages().map(summarize));
+  }, []);
+
+  // 보관함은 마운트 시 한 번 읽고, 이후 저장/삭제할 때 갱신한다
+  useEffect(() => {
+    refreshSavedPages();
+  }, [refreshSavedPages]);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -143,22 +162,42 @@ export const usePageBuilder = (
   }, []);
 
   const savePage = useCallback(() => {
-    const savedPages = JSON.parse(localStorage.getItem('techPages') || '{}');
-    savedPages[page.id] = { version: 1, page, capabilities } satisfies PageSource;
-    localStorage.setItem('techPages', JSON.stringify(savedPages));
-    return page.id;
-  }, [page, capabilities]);
+    const ok = writePage(page, capabilities);
+    refreshSavedPages();
+    return ok ? page.id : null;
+  }, [page, capabilities, refreshSavedPages]);
 
   const loadPage = useCallback((pageId: string) => {
-    const savedPages = JSON.parse(localStorage.getItem('techPages') || '{}');
-    const entry = savedPages[pageId];
+    const entry = readPage(pageId);
     if (!entry) return false;
 
-    // v1 소스 파일과, 권한 개념 이전에 저장된 순수 TechPage 모두 받아준다.
-    const loadedPage: TechPage = entry.page ?? entry;
-    setPage(loadedPage);
-    setCapabilities(normalizeCapabilities(entry.capabilities));
+    setPage(entry.page);
+    setCapabilities(entry.capabilities);
+    setSelectedBlockId(null);
     return true;
+  }, []);
+
+  const deletePage = useCallback(
+    (pageId: string) => {
+      const ok = removePage(pageId);
+      refreshSavedPages();
+      return ok;
+    },
+    [refreshSavedPages]
+  );
+
+  /** 빈 페이지에서 새로 시작한다. 권한은 기본값으로 되돌린다. */
+  const newPage = useCallback(() => {
+    setPage({
+      id: generateId(),
+      title: '새 기술 페이지',
+      subtitle: '설명을 입력하세요',
+      category: '범용',
+      lastModified: new Date().toISOString(),
+      blocks: [],
+    });
+    setCapabilities(defaultCapabilities());
+    setSelectedBlockId(null);
   }, []);
 
   /** 작성자가 보관하는 소스: 전체 블록 + 전체 권한 */
@@ -215,16 +254,22 @@ export const usePageBuilder = (
     [page, capabilities]
   );
 
+  /** 사본을 만들어 보관함에 저장하고, 편집 대상을 그 사본으로 옮긴다. */
   const duplicatePage = useCallback(() => {
-    const newPage: TechPage = {
+    const copy: TechPage = {
       ...page,
       id: generateId(),
       title: `${page.title} (복사본)`,
       lastModified: new Date().toISOString(),
-      blocks: page.blocks.map(block => ({ ...block, id: generateId() })),
+      blocks: page.blocks.map((block) => ({ ...block, id: generateId() })),
     };
-    return newPage;
-  }, [page]);
+
+    writePage(copy, capabilities);
+    refreshSavedPages();
+    setPage(copy);
+    setSelectedBlockId(null);
+    return copy;
+  }, [page, capabilities, refreshSavedPages]);
 
   return {
     page,
@@ -241,8 +286,12 @@ export const usePageBuilder = (
     capabilities,
     setCapabilities,
     updateCapabilities,
+    savedPages,
+    refreshSavedPages,
     savePage,
     loadPage,
+    deletePage,
+    newPage,
     exportSource,
     importSource,
     publishHtml,
