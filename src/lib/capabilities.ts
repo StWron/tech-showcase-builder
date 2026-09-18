@@ -1,16 +1,8 @@
 import { BlockType, PageCapabilities } from '@/types/page-builder';
+import { ALL_BLOCK_TYPES, BLOCK_TYPE_LABELS } from '@/blocks';
 
 export type { PageCapabilities };
-
-export const ALL_BLOCK_TYPES: BlockType[] = [
-  'heading',
-  'text',
-  'image',
-  'video',
-  'code',
-  'list',
-  'divider',
-];
+export { ALL_BLOCK_TYPES, BLOCK_TYPE_LABELS };
 
 export const defaultCapabilities = (): PageCapabilities => ({
   allowedBlockTypes: [...ALL_BLOCK_TYPES],
@@ -61,16 +53,6 @@ export const FEATURE_CAPABILITIES: CapabilityDescriptor[] = [
     description: '열람자가 페이지 JSON을 내려받을 수 있는 버튼을 포함합니다.',
   },
 ];
-
-export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  heading: '제목',
-  text: '텍스트',
-  image: '이미지',
-  video: '동영상',
-  code: '코드',
-  list: '목록',
-  divider: '구분선',
-};
 
 /**
  * 외부에서 읽어온 값(가져온 파일, localStorage)을 신뢰 가능한 형태로 정규화한다.
@@ -132,33 +114,41 @@ export interface CapabilityPreset {
  *
  * 프리셋은 출발점일 뿐이고, 고르고 나서 개별 스위치를 계속 조정할 수 있다.
  */
+/** 제어 블록을 뺀 나머지 전부 */
+const VIEW_ONLY_TYPES = ALL_BLOCK_TYPES.filter((type) => type !== 'command');
+
+const BASE: Omit<PageCapabilities, 'allowedBlockTypes'> = {
+  editing: false,
+  codeCopy: true,
+  externalEmbeds: true,
+  showMeta: true,
+  showFooter: true,
+  sourceDownload: false,
+};
+
 export const CAPABILITY_PRESETS: CapabilityPreset[] = [
   {
-    id: 'public',
-    name: '공개 배포',
-    description: '누구나 열람. 편집 경로 없음, 원본도 심지 않음.',
-    capabilities: {
-      allowedBlockTypes: [...ALL_BLOCK_TYPES],
-      editing: false,
-      codeCopy: true,
-      externalEmbeds: true,
-      showMeta: true,
-      showFooter: true,
-      sourceDownload: false,
-    },
+    id: 'monitoring',
+    name: '모니터링 전용',
+    description:
+      '제어 블록을 통째로 제거. 엔드포인트 주소조차 산출물에 남지 않는다. 일반 공개 배포도 이걸 쓴다.',
+    capabilities: { ...BASE, allowedBlockTypes: VIEW_ONLY_TYPES },
+  },
+  {
+    id: 'control',
+    name: '제어 포함',
+    description: '제어 블록을 싣는다. 서버에서 계정별 권한을 함께 막아야 한다.',
+    capabilities: { ...BASE, allowedBlockTypes: [...ALL_BLOCK_TYPES] },
   },
   {
     id: 'internal',
     name: '사내 열람',
     description: '외부 임베드와 메타를 빼고 자료를 밖으로 덜 흘리는 구성.',
     capabilities: {
-      allowedBlockTypes: [...ALL_BLOCK_TYPES],
-      editing: false,
-      codeCopy: true,
+      ...BASE,
+      allowedBlockTypes: VIEW_ONLY_TYPES,
       externalEmbeds: false,
       showMeta: false,
-      showFooter: true,
-      sourceDownload: false,
     },
   },
   {
@@ -166,12 +156,9 @@ export const CAPABILITY_PRESETS: CapabilityPreset[] = [
     name: '편집자 전달',
     description: '받는 쪽이 에디터로 다시 열어 이어서 작업할 수 있게 원본을 심는다.',
     capabilities: {
+      ...BASE,
       allowedBlockTypes: [...ALL_BLOCK_TYPES],
       editing: true,
-      codeCopy: true,
-      externalEmbeds: true,
-      showMeta: true,
-      showFooter: true,
       sourceDownload: true,
     },
   },
@@ -180,13 +167,11 @@ export const CAPABILITY_PRESETS: CapabilityPreset[] = [
     name: '인쇄용 유인물',
     description: '코드와 동영상을 빼고 읽는 내용만. 대화형 요소 없음.',
     capabilities: {
+      ...BASE,
       allowedBlockTypes: ['heading', 'text', 'image', 'list', 'divider'],
-      editing: false,
       codeCopy: false,
       externalEmbeds: false,
-      showMeta: true,
       showFooter: false,
-      sourceDownload: false,
     },
   },
 ];

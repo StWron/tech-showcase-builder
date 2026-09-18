@@ -141,3 +141,27 @@ describe('capability presets', () => {
     expect(handout?.capabilities.allowedBlockTypes).not.toContain('video');
   });
 });
+
+describe('프리셋은 서로 구별돼야 한다', () => {
+  it('결과가 같은 프리셋이 둘 있으면 패널에서 둘 다 활성으로 보여 깨진다', () => {
+    const seen = new Map<string, string>();
+
+    for (const preset of CAPABILITY_PRESETS) {
+      const key = JSON.stringify({
+        ...preset.capabilities,
+        allowedBlockTypes: [...preset.capabilities.allowedBlockTypes].sort(),
+      });
+
+      expect(
+        seen.get(key),
+        `'${preset.name}' 과 '${seen.get(key)}' 의 권한 집합이 동일합니다`
+      ).toBeUndefined();
+      seen.set(key, preset.name);
+    }
+  });
+
+  it('id 가 겹치지 않는다', () => {
+    const ids = CAPABILITY_PRESETS.map((preset) => preset.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

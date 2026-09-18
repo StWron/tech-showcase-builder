@@ -1,5 +1,6 @@
 import { ContentBlock, TechPage } from '@/types/page-builder';
 import { PageCapabilities } from './capabilities';
+import { isKnownBlock } from '@/blocks';
 
 /**
  * 산출물에 실제로 실릴 페이지 모델.
@@ -33,7 +34,8 @@ export const bake = (page: TechPage, capabilities: PageCapabilities): BakedPage 
   const allowed = new Set(capabilities.allowedBlockTypes);
 
   const blocks = [...page.blocks]
-    .filter((block) => allowed.has(block.type))
+    // 레지스트리에 없는 타입은 렌더할 방법도 검증할 방법도 없으므로 버린다
+    .filter((block) => isKnownBlock(block) && allowed.has(block.type))
     .sort((a, b) => a.order - b.order)
     .map(stripEditorFields);
 

@@ -1,26 +1,12 @@
 import { ContentBlock, GridPosition } from '@/types/page-builder';
+import { getBlockDefinition } from '@/blocks';
 
 export const GRID_COLUMNS = 12;
 export const GRID_ROW_HEIGHT = 60; // px per grid row (에디터 캔버스 전용)
 
-/** 블록 타입별 기본 그리드 스팬 */
-export const getDefaultSpan = (type: ContentBlock['type']): number => {
-  switch (type) {
-    case 'heading':
-    case 'divider':
-      return 12;
-    case 'text':
-    case 'list':
-      return 8;
-    case 'image':
-    case 'video':
-      return 6;
-    case 'code':
-      return 10;
-    default:
-      return 6;
-  }
-};
+/** 블록 타입별 기본 그리드 스팬 — 레지스트리의 정의를 따른다 */
+export const getDefaultSpan = (type: ContentBlock['type']): number =>
+  getBlockDefinition(type)?.defaultSpan ?? 6;
 
 /** order 기반으로 자동 그리드 위치 계산 */
 export const calculateGridPositions = (blocks: ContentBlock[]): Map<string, GridPosition> => {

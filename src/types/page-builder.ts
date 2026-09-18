@@ -1,4 +1,12 @@
-export type BlockType = 'heading' | 'text' | 'image' | 'video' | 'code' | 'divider' | 'list';
+export type BlockType =
+  | 'heading'
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'code'
+  | 'divider'
+  | 'list'
+  | 'command';
 
 export type BlockSize = 'small' | 'medium' | 'large' | 'full';
 
@@ -81,6 +89,28 @@ export interface ListBlock extends BaseBlock {
   ordered: boolean;
 }
 
+/**
+ * 장비에 명령을 보내는 블록.
+ *
+ * 이 타입을 권한에서 끄면 산출물에 버튼도 스크립트도, **엔드포인트 주소조차**
+ * 들어가지 않는다. 모니터링 전용 배포물은 어디를 호출해야 하는지도 알 수 없다.
+ *
+ * 다만 이것은 서버 인가를 대신하지 않는다. 버튼을 지우는 것은 수단을 지우는
+ * 것이지 권한을 지우는 것이 아니므로, 제어 엔드포인트는 서버에서 계정별로
+ * 막혀 있어야 한다.
+ */
+export interface CommandBlock extends BaseBlock {
+  type: 'command';
+  /** 버튼 문구 */
+  label: string;
+  /** POST 대상. http/https 절대 URL만 산출물에 실린다. */
+  endpoint: string;
+  /** 요청 본문 (JSON 문자열) */
+  payload: string;
+  /** 실행 전 확인을 받을지 */
+  confirm: boolean;
+}
+
 export type ContentBlock = 
   | HeadingBlock 
   | TextBlock 
@@ -88,7 +118,8 @@ export type ContentBlock =
   | VideoBlock 
   | CodeBlock 
   | DividerBlock 
-  | ListBlock;
+  | ListBlock
+  | CommandBlock;
 
 export interface TechPage {
   id: string;

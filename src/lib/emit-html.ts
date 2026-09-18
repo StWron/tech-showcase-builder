@@ -1,60 +1,11 @@
-import {
-  CodeBlock,
-  ContentBlock,
-  DividerBlock,
-  HeadingBlock,
-  ImageBlock,
-  ListBlock,
-  TechPage,
-  TextBlock,
-  VideoBlock,
-  BlockColor,
-} from '@/types/page-builder';
+import { BlockColor, ContentBlock, TechPage } from '@/types/page-builder';
 import { PageCapabilities } from './capabilities';
 import { BakedPage, bake } from './bake';
 import { GRID_COLUMNS, calculateGridPositions, getDefaultSpan, sortByGrid } from './grid';
+import { BlockAssets, EmitContext, getBlockDefinition } from '@/blocks';
+import { escapeHtml, escapeJsonForScript, sanitizeUrl } from './html-escape';
 
-/* ------------------------------------------------------------------ *
- * 이스케이프 / URL 위생
- * ------------------------------------------------------------------ */
-
-export const escapeHtml = (value: unknown): string =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-/** <script type="application/json"> 안에 안전하게 넣기 위한 직렬화 */
-export const escapeJsonForScript = (value: unknown): string =>
-  JSON.stringify(value)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-
-const IMAGE_DATA_URI = /^data:image\/(png|jpe?g|gif|webp);base64,/i;
-
-/**
- * javascript:, vbscript:, data:text/html 등이 산출물로 새어 나가지 않게 한다.
- * http/https, 프로토콜 상대, 상대 경로만 통과. 이미지에 한해 base64 데이터 URI 허용.
- */
-export const sanitizeUrl = (raw: string, options: { allowDataImage?: boolean } = {}): string => {
-  const value = String(raw ?? '').trim();
-  if (!value) return '';
-
-  const schemeMatch = value.match(/^([a-z][a-z0-9+.-]*):/i);
-  if (schemeMatch) {
-    const scheme = schemeMatch[1].toLowerCase();
-    if (scheme === 'http' || scheme === 'https') return value;
-    if (options.allowDataImage && IMAGE_DATA_URI.test(value)) return value;
-    return '';
-  }
-
-  // 스킴 없음 = 상대 경로 또는 프로토콜 상대 URL
-  return value;
-};
+export { escapeHtml, escapeJsonForScript, sanitizeUrl };
 
 /* ------------------------------------------------------------------ *
  * 블록 스타일
@@ -100,154 +51,27 @@ const blockStyleAttr = (block: ContentBlock): string => {
 };
 
 /* ------------------------------------------------------------------ *
- * 블록별 마크업
- * ------------------------------------------------------------------ */
-
-const renderParagraphs = (content: string): string =>
-  String(content ?? '')
-    .split(/\n{2,}/)
-    .filter((paragraph) => paragraph.trim().length > 0)
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`)
-    .join('\n');
-
-const renderHeading = (block: HeadingBlock): string => {
-  const level = block.level === 1 || block.level === 3 ? block.level : 2;
-  return `<h${level} class="tsb-heading tsb-h${level}">${escapeHtml(block.content)}</h${level}>`;
-};
-
-const renderText = (block: TextBlock): string =>
-  `<div class="tsb-text">${renderParagraphs(block.content)}</div>`;
-
-const renderList = (block: ListBlock): string => {
-  const items = (block.items || [])
-    .filter((item) => String(item ?? '').trim().length > 0)
-    .map((item) => `<li>${escapeHtml(item)}</li>`)
-    .join('\n');
-  if (!items) return '';
-  const tag = block.ordered ? 'ol' : 'ul';
-  return `<${tag} class="tsb-list">${items}</${tag}>`;
-};
-
-const renderDivider = (_block: DividerBlock): string => '<hr class="tsb-divider" />';
-
-const renderImage = (block: ImageBlock): string => {
-  const src = sanitizeUrl(block.src, { allowDataImage: true });
-  if (!src) return '';
-
-  const caption = String(block.caption ?? '').trim();
-  return [
-    '<figure class="tsb-figure">',
-    `<img class="tsb-image" src="${escapeHtml(src)}" alt="${escapeHtml(block.alt)}" loading="lazy" />`,
-    caption ? `<figcaption class="tsb-caption">${escapeHtml(caption)}</figcaption>` : '',
-    '</figure>',
-  ]
-    .filter(Boolean)
-    .join('\n');
-};
-
-interface VideoTarget {
-  kind: 'iframe' | 'file';
-  url: string;
-}
-
-/** 편집기의 getEmbedUrl과 동일한 규칙 */
-export const resolveVideo = (raw: string): VideoTarget | null => {
-  const url = sanitizeUrl(raw);
-  if (!url) return null;
-
-  const youtube = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-  );
-  if (youtube) return { kind: 'iframe', url: `https://www.youtube.com/embed/${youtube[1]}` };
-
-  const vimeo = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeo) return { kind: 'iframe', url: `https://player.vimeo.com/video/${vimeo[1]}` };
-
-  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return { kind: 'file', url };
-
-  return null;
-};
-
-const renderVideo = (block: VideoBlock, capabilities: PageCapabilities): string => {
-  const target = resolveVideo(block.src);
-  if (!target) return '';
-
-  const title = String(block.title ?? '').trim();
-  const caption = title ? `<figcaption class="tsb-caption">${escapeHtml(title)}</figcaption>` : '';
-
-  // 외부 임베드가 꺼져 있으면 iframe 태그를 아예 내보내지 않는다.
-  if (target.kind === 'iframe' && !capabilities.externalEmbeds) {
-    return [
-      '<figure class="tsb-figure">',
-      `<a class="tsb-external-link" href="${escapeHtml(target.url)}" target="_blank" rel="noopener noreferrer">`,
-      `${escapeHtml(title || '외부 동영상 열기')}</a>`,
-      '</figure>',
-    ].join('\n');
-  }
-
-  const media =
-    target.kind === 'file'
-      ? `<video class="tsb-media" src="${escapeHtml(target.url)}" controls preload="metadata"></video>`
-      : `<iframe class="tsb-media" src="${escapeHtml(target.url)}" title="${escapeHtml(title || '동영상')}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-
-  return ['<figure class="tsb-figure">', `<div class="tsb-frame">${media}</div>`, caption, '</figure>']
-    .filter(Boolean)
-    .join('\n');
-};
-
-const renderCode = (block: CodeBlock, capabilities: PageCapabilities): string => {
-  const language = String(block.language ?? '').trim() || 'text';
-  const copyButton = capabilities.codeCopy
-    ? '<button class="tsb-copy" type="button" data-tsb-copy>복사</button>'
-    : '';
-
-  return [
-    '<div class="tsb-code">',
-    '<div class="tsb-code-bar">',
-    '<span class="tsb-dots"><i></i><i></i><i></i></span>',
-    '<span class="tsb-code-meta">',
-    `<span class="tsb-lang">${escapeHtml(language)}</span>`,
-    copyButton,
-    '</span>',
-    '</div>',
-    `<pre class="tsb-pre"><code>${escapeHtml(block.content)}</code></pre>`,
-    '</div>',
-  ].join('\n');
-};
-
-const renderBlockBody = (block: ContentBlock, capabilities: PageCapabilities): string => {
-  switch (block.type) {
-    case 'heading':
-      return renderHeading(block);
-    case 'text':
-      return renderText(block);
-    case 'list':
-      return renderList(block);
-    case 'divider':
-      return renderDivider(block);
-    case 'image':
-      return renderImage(block);
-    case 'video':
-      return renderVideo(block, capabilities);
-    case 'code':
-      return renderCode(block, capabilities);
-    default:
-      return '';
-  }
-};
-
-/* ------------------------------------------------------------------ *
  * 문서 조립
  * ------------------------------------------------------------------ */
 
-const renderGrid = (baked: BakedPage, capabilities: PageCapabilities): string => {
+interface RenderedBody {
+  html: string;
+  /** 마크업을 실제로 내놓은 블록들. 타입별 런타임 조각은 이 목록만 보고 고른다. */
+  rendered: ContentBlock[];
+}
+
+const renderGrid = (baked: BakedPage, context: EmitContext): RenderedBody => {
   const positions = calculateGridPositions(baked.blocks);
   const ordered = sortByGrid(baked.blocks, positions);
 
+  const rendered: ContentBlock[] = [];
+
   const cells = ordered
     .map((block) => {
-      const body = renderBlockBody(block, capabilities);
+      const body = getBlockDefinition(block.type)?.emit(block, context) ?? '';
       if (!body.trim()) return '';
+
+      rendered.push(block);
 
       const position = positions.get(block.id);
       const span = Math.min(
@@ -271,10 +95,30 @@ const renderGrid = (baked: BakedPage, capabilities: PageCapabilities): string =>
     .filter(Boolean);
 
   if (!cells.length) {
-    return '<p class="tsb-empty">표시할 콘텐츠가 없습니다.</p>';
+    return { html: '<p class="tsb-empty">표시할 콘텐츠가 없습니다.</p>', rendered };
   }
 
-  return `<div class="tsb-grid">\n${cells.join('\n')}\n</div>`;
+  return { html: `<div class="tsb-grid">\n${cells.join('\n')}\n</div>`, rendered };
+};
+
+/**
+ * 마크업을 실제로 내놓은 타입의 런타임 조각만 모은다.
+ *
+ * 블록이 남아 있어도 값이 비어 실리지 않았다면 그 스크립트도 따라가지 않는다.
+ * 산출물에 쓰이지 않는 코드가 한 줄도 없어야 "없는 코드는 켤 수 없다"가 성립한다.
+ */
+const collectAssets = (rendered: ContentBlock[], context: EmitContext): BlockAssets[] => {
+  const byType = new Map<ContentBlock['type'], ContentBlock[]>();
+
+  for (const block of rendered) {
+    const group = byType.get(block.type);
+    if (group) group.push(block);
+    else byType.set(block.type, [block]);
+  }
+
+  return [...byType.entries()]
+    .map(([type, blocks]) => getBlockDefinition(type)?.assets?.(blocks, context) ?? {})
+    .filter((assets) => assets.css || assets.script);
 };
 
 const formatDate = (iso?: string): string => {
@@ -484,24 +328,6 @@ a{color:var(--primary)}
 @media print{.tsb-actions,.tsb-copy{display:none}}
 `.trim();
 
-const COPY_SCRIPT = `
-document.querySelectorAll('[data-tsb-copy]').forEach(function (button) {
-  button.addEventListener('click', function () {
-    var container = button.closest('.tsb-code');
-    var code = container && container.querySelector('code');
-    if (!code) return;
-    var done = function () {
-      var original = button.textContent;
-      button.textContent = '복사됨';
-      setTimeout(function () { button.textContent = original; }, 1500);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(code.textContent).then(done, function () {});
-    }
-  });
-});
-`.trim();
-
 const SOURCE_SCRIPT = `
 (function () {
   var node = document.getElementById('tsb-source');
@@ -543,8 +369,9 @@ export const emitHtml = (
   const baked = bake(page, capabilities);
   const signature = options.signature || 'Tech Page Builder';
 
-  const body = renderGrid(baked, capabilities);
-  const hasCopyButton = capabilities.codeCopy && body.includes('data-tsb-copy');
+  const context: EmitContext = { capabilities };
+  const { html: body, rendered } = renderGrid(baked, context);
+  const assets = collectAssets(rendered, context);
 
   // 원본 임베드는 편집 재개방 또는 원본 내려받기가 켜져 있을 때만.
   // 임베드되는 것은 baked 모델이므로, 권한으로 제거된 콘텐츠는 여기에도 없다.
@@ -569,8 +396,9 @@ export const emitHtml = (
         .join('\n')
     : '';
 
-  const scripts: string[] = [];
-  if (hasCopyButton) scripts.push(COPY_SCRIPT);
+  const scripts: string[] = assets
+    .map((asset) => asset.script)
+    .filter((script): script is string => Boolean(script));
   if (capabilities.sourceDownload) scripts.push(SOURCE_SCRIPT);
 
   const sourcePayload = embedSource
@@ -584,7 +412,14 @@ export const emitHtml = (
   const header = renderHeader(baked, capabilities);
 
   // 마크업을 먼저 확정한 뒤, 거기서 실제로 쓰인 클래스의 규칙만 남긴다
-  const css = pruneCss(THEME_CSS, collectUsedClasses([header, body, footer].join('\n')));
+  const blockCss = assets
+    .map((asset) => asset.css)
+    .filter((rule): rule is string => Boolean(rule));
+
+  const css = [
+    pruneCss(THEME_CSS, collectUsedClasses([header, body, footer].join('\n'))),
+    ...blockCss,
+  ].join('\n');
 
   return [
     '<!doctype html>',

@@ -8,6 +8,7 @@ import {
   PageSource,
 } from '@/types/page-builder';
 import { defaultCapabilities, normalizeCapabilities } from '@/lib/capabilities';
+import { getBlockDefinition } from '@/blocks';
 import {
   SavedPageSummary,
   readAllPages,
@@ -21,27 +22,11 @@ import { summarizeBake } from '@/lib/bake';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-const createDefaultBlock = (type: BlockType, order: number): ContentBlock => {
-  const base = { id: generateId(), size: 'full' as BlockSize, order };
-  
-  switch (type) {
-    case 'heading':
-      return { ...base, type: 'heading', content: '새 제목', level: 2 };
-    case 'text':
-      return { ...base, type: 'text', content: '텍스트를 입력하세요...' };
-    case 'image':
-      return { ...base, type: 'image', src: '', alt: '이미지 설명', caption: '' };
-    case 'video':
-      return { ...base, type: 'video', src: '', title: '동영상 제목' };
-    case 'code':
-      return { ...base, type: 'code', content: '// 코드를 입력하세요', language: 'javascript' };
-    case 'divider':
-      return { ...base, type: 'divider' };
-    case 'list':
-      return { ...base, type: 'list', items: ['항목 1', '항목 2', '항목 3'], ordered: false };
-    default:
-      return { ...base, type: 'text', content: '' };
-  }
+const createDefaultBlock = (type: BlockType, order: number): ContentBlock | null => {
+  const definition = getBlockDefinition(type);
+  if (!definition) return null;
+
+  return definition.create({ id: generateId(), size: 'full' as BlockSize, order });
 };
 
 export const usePageBuilder = (
@@ -84,6 +69,7 @@ export const usePageBuilder = (
         : prev.blocks.length;
       
       const newBlock = createDefaultBlock(type, newOrder + 1);
+      if (!newBlock) return prev;
       
       const updatedBlocks = afterId
         ? prev.blocks.map(b => b.order > newOrder ? { ...b, order: b.order + 1 } : b)
