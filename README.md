@@ -1,73 +1,80 @@
-# Welcome to your Lovable project
+# Tech Page Builder
 
-## Project info
+기술 소개 페이지를 만드는 **에디터**입니다. 이 저장소의 React 앱은 에디터 그 자체이고,
+에디터가 만들어내는 산출물은 React 앱이 아니라 **자기완결 HTML 문서**입니다.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 왜 이렇게 만드는가
 
-## How can I edit this code?
+보통의 웹앱은 계정마다 권한을 부여하고 화면에서 런타임에 그 권한을 검사합니다.
+검사하는 쪽이 브라우저이면 그 검사는 뒤집힐 수 있습니다 — 기능 코드가 이미 번들에
+들어 있으니 플래그 하나만 바꾸면 열립니다.
 
-There are several ways of editing your application.
+이 프로젝트는 그 순서를 뒤집습니다. **권한은 생성 시점에 적용되고, 꺼진 기능은 산출물에
+코드가 들어가지 않습니다.** 없는 코드는 켤 수 없습니다.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+소스(.tsbproj)  ──[ 권한 매니페스트 적용 = bake ]──>  게시물(.html)
+ 전체 블록                                            켜진 것만
+ 전체 권한                                            꺼진 것은 마크업/스크립트/CSS 모두 없음
+ 작성자 보관                                          열람자에게 전달
 ```
 
-**Edit a file directly in GitHub**
+### 무엇이 실제로 빠지는가
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| 권한 | 끄면 산출물에서 사라지는 것 |
+|---|---|
+| 블록 타입 (제목/텍스트/이미지/동영상/코드/목록/구분선) | 해당 블록의 **내용까지 통째로** |
+| 편집 재개방 | 임베드된 원본 JSON — 게시물만으로는 편집 불가 |
+| 코드 복사 | 복사 버튼 + 클립보드 스크립트 |
+| 외부 임베드 | `<iframe>` 태그 (링크만 남음) |
+| 메타 정보 | 카테고리 배지, 최종 수정일 |
+| 푸터 | 푸터 마크업 |
+| 원본 내려받기 | 내려받기 버튼 + 관련 스크립트 |
 
-**Use GitHub Codespaces**
+스타일시트도 함께 가지치기 합니다. 쓰이지 않는 클래스 규칙이 남아 있으면 CSS만 보고도
+"여기 코드 블록 기능이 있었구나"를 알 수 있기 때문입니다.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 다시 편집하기
 
-## What technologies are used for this project?
+- **편집 재개방 ON** — 게시물이 자기 모델을 품고 있어, 그 HTML을 에디터에 가져오면
+  다시 열리고 권한도 다시 on/off 할 수 있습니다.
+- **편집 재개방 OFF** — 게시물은 막다른 길입니다. 편집하려면 작성자가 보관한 소스 파일이
+  필요합니다.
 
-This project is built with:
+편집 재개방을 켜도, 심기는 것은 **구워진(baked) 모델**입니다. 권한으로 제거한 콘텐츠는
+그 안에도 없으므로 재개방이 유출 통로가 되지 않습니다. 되살리려면 소스 파일이 있어야 합니다.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 이 보장의 경계
 
-## How can I deploy this project?
+생략에 의한 보장은 **클라이언트 전용 기능**에 대한 것입니다. 편집 UI, 섹션 노출,
+버튼 — 이런 것들은 코드가 없으면 정말로 되살아나지 않습니다.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+페이지가 훗날 서버 API를 호출하게 되면 그 API는 **별도의 서버 인가가 필요합니다.**
+HTML에서 버튼을 지운다고 엔드포인트가 막히지는 않습니다.
 
-## Can I connect a custom domain to my Lovable project?
+## 코드 구조
 
-Yes, you can!
+| 경로 | 역할 |
+|---|---|
+| `src/types/page-builder.ts` | 페이지·블록·권한(`PageCapabilities`)·소스(`PageSource`) 타입 |
+| `src/lib/capabilities.ts` | 권한 기본값, 정규화(외부 입력 방어), 라벨 |
+| `src/lib/bake.ts` | 권한을 적용해 모델에서 콘텐츠를 **제거** |
+| `src/lib/emit-html.ts` | 구운 모델 → 자기완결 HTML. 이스케이프·URL 위생·CSS 가지치기 |
+| `src/lib/grid.ts` | 에디터 캔버스와 산출물이 공유하는 12열 격자 계산 |
+| `src/components/CapabilityPanel.tsx` | 권한 토글 UI + 게시 영향 요약 |
+| `src/components/PageActions.tsx` | 저장 / 게시 / 미리보기 / 소스 저장 / 가져오기 |
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+`emitHtml`의 계약은 테스트로 고정되어 있습니다 (`src/test/emit-html.test.ts`):
+꺼진 권한에 해당하는 문자열은 반환된 HTML 어디에도 없어야 합니다.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 개발
+
+```sh
+npm install
+npm run dev      # 에디터 실행
+npm test         # 생성기 계약 테스트
+npm run lint
+npm run build
+```
+
+Vite · TypeScript · React · shadcn-ui · Tailwind CSS 로 만들어졌습니다.

@@ -19,6 +19,8 @@ import { useState } from 'react';
 
 interface AddBlockButtonProps {
   onAddBlock: (type: BlockType) => void;
+  /** 게시 권한으로 허용된 타입. 지정하면 그 외 타입은 추가할 수 없다. */
+  allowedTypes?: BlockType[];
 }
 
 const blockTypes: { type: BlockType; icon: React.ReactNode; label: string }[] = [
@@ -31,8 +33,12 @@ const blockTypes: { type: BlockType; icon: React.ReactNode; label: string }[] = 
   { type: 'divider', icon: <Minus className="w-4 h-4" />, label: '구분선' },
 ];
 
-export const AddBlockButton = ({ onAddBlock }: AddBlockButtonProps) => {
+export const AddBlockButton = ({ onAddBlock, allowedTypes }: AddBlockButtonProps) => {
   const [open, setOpen] = useState(false);
+
+  const available = allowedTypes
+    ? blockTypes.filter(({ type }) => allowedTypes.includes(type))
+    : blockTypes;
 
   const handleAddBlock = (type: BlockType) => {
     onAddBlock(type);
@@ -52,7 +58,7 @@ export const AddBlockButton = ({ onAddBlock }: AddBlockButtonProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2 bg-card border-border">
         <div className="grid grid-cols-2 gap-1">
-          {blockTypes.map(({ type, icon, label }) => (
+          {available.map(({ type, icon, label }) => (
             <Button
               key={type}
               variant="ghost"
@@ -63,6 +69,11 @@ export const AddBlockButton = ({ onAddBlock }: AddBlockButtonProps) => {
               {label}
             </Button>
           ))}
+          {available.length === 0 && (
+            <p className="col-span-2 p-3 text-xs text-muted-foreground text-center">
+              권한에서 모든 블록 타입이 꺼져 있습니다.
+            </p>
+          )}
         </div>
       </PopoverContent>
     </Popover>
