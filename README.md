@@ -99,6 +99,19 @@ export const gaugeBlock = defineBlock<GaugeBlock>({
 `assets` 의 스크립트/CSS는 **그 타입의 블록이 실제로 마크업을 내놓았을 때만** 산출물에
 들어갑니다. 권한에서 껐거나, 값이 비어 블록이 실리지 않았다면 따라가지 않습니다.
 
+## 격자 배치
+
+에디터 캔버스와 산출물 모두 12열 CSS Grid를 쓰고, 자리 계산은
+`resolveCellPlacement()` **한 함수**를 공유합니다. 배치 규칙이 갈라지면 편집 화면과
+결과물이 달라지는데, 페이지 빌더에서 그건 버그입니다.
+
+행 높이는 내용에 따라 늘어납니다. 드래그 드롭은 행 높이를 DOM에서 재서 대상 행을
+정하므로, 블록이 길어져도 아래 행을 덮지 않습니다.
+
+이미 차 있는 자리에 떨어뜨리면 그 위에 얹지 않고 **새 행을 끼워 넣습니다**
+(행의 위쪽 절반에 놓으면 위에, 아래쪽 절반이면 아래에). 열이 비어 있으면 같은 행에
+나란히 놓입니다. 어떤 경우에도 블록끼리 겹치지 않습니다.
+
 ## 코드 구조
 
 | 경로 | 역할 |
@@ -110,7 +123,7 @@ export const gaugeBlock = defineBlock<GaugeBlock>({
 | `src/lib/emit-html.ts` | 구운 모델 → 자기완결 HTML. 문서 조립·CSS 가지치기·런타임 조각 수집 |
 | `src/lib/html-escape.ts` | 이스케이프와 URL 위생 (블록 정의와 공용) |
 | `src/lib/page-store.ts` | 보관함(localStorage) 접근과 형태 검사 |
-| `src/lib/grid.ts` | 에디터 캔버스와 산출물이 공유하는 12열 격자 계산 |
+| `src/lib/grid.ts` | 12열 격자 계산·배치·드롭 계획. 에디터와 산출물이 **같은 함수**를 쓴다 |
 | `src/components/CapabilityPanel.tsx` | 권한 토글 UI + 게시 영향 요약 |
 | `src/components/PageActions.tsx` | 저장 / 게시 / 미리보기 / 소스 저장 / 가져오기 |
 

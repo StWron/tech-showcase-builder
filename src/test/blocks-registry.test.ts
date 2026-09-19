@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CommandBlock, TechPage } from '@/types/page-builder';
 import { BLOCK_REGISTRY, ALL_BLOCK_TYPES, getBlockDefinition } from '@/blocks';
 import { CAPABILITY_PRESETS, defaultCapabilities, toggleBlockType } from '@/lib/capabilities';
-import { getDefaultSpan } from '@/lib/grid';
+import { getDefaultSpan, resolveCellPlacement, toGridStyle } from '@/lib/grid';
 import { bake } from '@/lib/bake';
 import { emitHtml } from '@/lib/emit-html';
 
@@ -188,5 +188,59 @@ describe('getBlockDefinition', () => {
 
   it('없는 타입은 undefined', () => {
     expect(getBlockDefinition('gauge' as never)).toBeUndefined();
+  });
+});
+
+describe('격자 배치는 에디터와 산출물이 같은 규칙을 쓴다', () => {
+  const block = (overrides: Partial<TechPage['blocks'][number]> = {}) =>
+    ({
+      id: 'b',
+      type: 'text',
+      content: '내용',
+      size: 'full',
+      order: 0,
+      ...overrides,
+    }) as TechPage['blocks'][number];
+
+  it('위치가 없으면 타입의 기본 스팬을 1열부터 쓴다', () => {
+    expect(resolveCellPlacement(block({ type: 'heading', content: 'h', level: 2 } as never))).toEqual({
+      column: 1,
+      span: 12,
+      row: 0,
+    });
+  });
+
+  it('격자 밖으로 삐져나가는 스팬을 잘라낸다', () => {
+    expect(resolveCellPlacement(block(), { column: 10, columnSpan: 8, row: 2 })).toEqual({
+      column: 10,
+      span: 3,
+      row: 2,
+    });
+  });
+
+  it('범위를 벗어난 열과 음수 행을 되돌린다', () => {
+    expect(resolveCellPlacement(block(), { column: 99, columnSpan: 4, row: -5 })).toEqual({
+      column: 12,
+      span: 1,
+      row: 0,
+    });
+  });
+
+  it('CSS Grid 문자열은 행을 1-기준으로 민다', () => {
+    expect(toGridStyle({ column: 3, span: 4, row: 0 })).toEqual({
+      gridColumn: '3 / span 4',
+      gridRow: '1',
+    });
+  });
+
+  it('산출물 마크업이 같은 배치 값을 쓴다', () => {
+    const page = makePage({
+      blocks: [block({ gridPosition: { column: 5, columnSpan: 10, row: 1 } })],
+    });
+    const placement = resolveCellPlacement(page.blocks[0], page.blocks[0].gridPosition);
+    const html = emitHtml(page, defaultCapabilities());
+
+    expect(placement).toEqual({ column: 5, span: 8, row: 1 });
+    expect(html).toContain('grid-column:5 / span 8;grid-row:2');
   });
 });

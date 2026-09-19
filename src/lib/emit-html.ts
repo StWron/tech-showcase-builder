@@ -1,7 +1,7 @@
 import { BlockColor, ContentBlock, TechPage } from '@/types/page-builder';
 import { PageCapabilities } from './capabilities';
 import { BakedPage, bake } from './bake';
-import { GRID_COLUMNS, calculateGridPositions, getDefaultSpan, sortByGrid } from './grid';
+import { calculateGridPositions, resolveCellPlacement, sortByGrid } from './grid';
 import { BlockAssets, EmitContext, getBlockDefinition } from '@/blocks';
 import { escapeHtml, escapeJsonForScript, sanitizeUrl } from './html-escape';
 
@@ -73,16 +73,9 @@ const renderGrid = (baked: BakedPage, context: EmitContext): RenderedBody => {
 
       rendered.push(block);
 
-      const position = positions.get(block.id);
-      const span = Math.min(
-        GRID_COLUMNS,
-        Math.max(1, position?.columnSpan || getDefaultSpan(block.type))
-      );
-      const column = Math.min(GRID_COLUMNS, Math.max(1, position?.column || 1));
-      const row = Math.max(0, position?.row ?? 0) + 1;
-      const clampedSpan = Math.min(span, GRID_COLUMNS - column + 1);
-
-      const cellStyle = `grid-column:${column} / span ${clampedSpan};grid-row:${row}`;
+      // 에디터 캔버스와 동일한 배치 규칙 — 미리보기와 결과물이 갈라지지 않게 한다
+      const { column, span, row } = resolveCellPlacement(block, positions.get(block.id));
+      const cellStyle = `grid-column:${column} / span ${span};grid-row:${row + 1}`;
 
       return [
         `<div class="tsb-cell" style="${escapeHtml(cellStyle)}">`,
