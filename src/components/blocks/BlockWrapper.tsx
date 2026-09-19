@@ -1,11 +1,5 @@
-import { ContentBlock, BlockSize, BlockType, BlockAlignment, BlockStyle, BlockColor } from '@/types/page-builder';
-import { HeadingBlockComponent } from './HeadingBlockComponent';
-import { TextBlockComponent } from './TextBlockComponent';
-import { ImageBlockComponent } from './ImageBlockComponent';
-import { VideoBlockComponent } from './VideoBlockComponent';
-import { CodeBlockComponent } from './CodeBlockComponent';
-import { ListBlockComponent } from './ListBlockComponent';
-import { DividerBlockComponent } from './DividerBlockComponent';
+import { ContentBlock, BlockSize, BlockAlignment, BlockStyle, BlockColor } from '@/types/page-builder';
+import { getBlockDefinition } from '@/blocks';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -105,36 +99,15 @@ export const BlockWrapper = ({
   const isLocked = block.locked || false;
   const canEdit = isEditMode && !isLayoutLocked && !isLocked;
 
-  const renderBlock = () => {
-    switch (block.type) {
-      case 'heading':
-        return <HeadingBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'text':
-        return <TextBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'image':
-        return <ImageBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'video':
-        return <VideoBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'code':
-        return <CodeBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'list':
-        return <ListBlockComponent block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />;
-      case 'divider':
-        return <DividerBlockComponent block={block} isEditMode={canEdit && isSelected} />;
-      default:
-        return <div>Unknown block type</div>;
-    }
-  };
+  const definition = getBlockDefinition(block.type);
+  const BlockEditor = definition?.Editor;
 
-  const blockTypeNames: Record<BlockType, string> = {
-    heading: '제목',
-    text: '텍스트',
-    image: '이미지',
-    video: '동영상',
-    code: '코드',
-    list: '목록',
-    divider: '구분선',
-  };
+  const renderBlock = () =>
+    BlockEditor ? (
+      <BlockEditor block={block} isEditMode={canEdit && isSelected} onUpdate={onUpdate} />
+    ) : (
+      <div className="text-sm text-muted-foreground">알 수 없는 블록 타입: {block.type}</div>
+    );
 
   const updateStyle = (styleUpdates: Partial<BlockStyle>) => {
     onUpdate({ style: { ...style, ...styleUpdates } });
@@ -174,7 +147,7 @@ export const BlockWrapper = ({
           {/* Block Type & Grip */}
           <div className="flex items-center gap-1 px-2 border-r border-border">
             <GripVertical className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{blockTypeNames[block.type]}</span>
+            <span className="text-xs text-muted-foreground">{definition?.label ?? block.type}</span>
           </div>
           
           {/* Grid Span Control (격자 너비) */}

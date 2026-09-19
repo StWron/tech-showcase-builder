@@ -1,73 +1,143 @@
-# Welcome to your Lovable project
+# Tech Page Builder
 
-## Project info
+기술 소개 페이지를 만드는 **에디터**입니다. 이 저장소의 React 앱은 에디터 그 자체이고,
+에디터가 만들어내는 산출물은 React 앱이 아니라 **자기완결 HTML 문서**입니다.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 왜 이렇게 만드는가
 
-## How can I edit this code?
+현장 대시보드에 **모니터링 권한과 제어 권한을 분리**해야 한다는 요구에서 출발했습니다.
+보통의 웹앱은 계정마다 권한을 부여하고 화면에서 런타임에 그 권한을 검사합니다.
+검사하는 쪽이 브라우저이면 그 검사는 뒤집힐 수 있습니다 — 기능 코드가 이미 번들에
+들어 있으니 플래그 하나만 바꾸면 열립니다.
 
-There are several ways of editing your application.
+이 프로젝트는 그 순서를 뒤집습니다. **권한은 생성 시점에 적용되고, 꺼진 기능은 산출물에
+코드가 들어가지 않습니다.** 없는 코드는 켤 수 없습니다.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+소스(.tsbproj)  ──[ 권한 매니페스트 적용 = bake ]──>  게시물(.html)
+ 전체 블록                                            켜진 것만
+ 전체 권한                                            꺼진 것은 마크업/스크립트/CSS 모두 없음
+ 작성자 보관                                          열람자에게 전달
 ```
 
-**Edit a file directly in GitHub**
+### 무엇이 실제로 빠지는가
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| 권한 | 끄면 산출물에서 사라지는 것 |
+|---|---|
+| 제어 블록 | 버튼 · 전송 스크립트 · **엔드포인트 주소 · 페이로드** 전부 |
+| 그 외 블록 타입 (제목/텍스트/이미지/동영상/코드/목록/구분선) | 해당 블록의 **내용까지 통째로** |
+| 편집 재개방 | 임베드된 원본 JSON — 게시물만으로는 편집 불가 |
+| 코드 복사 | 복사 버튼 + 클립보드 스크립트 |
+| 외부 임베드 | `<iframe>` 태그 (링크만 남음) |
+| 메타 정보 | 카테고리 배지, 최종 수정일 |
+| 푸터 | 푸터 마크업 |
+| 원본 내려받기 | 내려받기 버튼 + 관련 스크립트 |
 
-**Use GitHub Codespaces**
+스타일시트도 함께 가지치기 합니다. 쓰이지 않는 클래스 규칙이 남아 있으면 CSS만 보고도
+"여기 코드 블록 기능이 있었구나"를 알 수 있기 때문입니다.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 다시 편집하기
 
-## What technologies are used for this project?
+- **편집 재개방 ON** — 게시물이 자기 모델을 품고 있어, 그 HTML을 에디터에 가져오면
+  다시 열리고 권한도 다시 on/off 할 수 있습니다.
+- **편집 재개방 OFF** — 게시물은 막다른 길입니다. 편집하려면 작성자가 보관한 소스 파일이
+  필요합니다.
 
-This project is built with:
+편집 재개방을 켜도, 심기는 것은 **구워진(baked) 모델**입니다. 권한으로 제거한 콘텐츠는
+그 안에도 없으므로 재개방이 유출 통로가 되지 않습니다. 되살리려면 소스 파일이 있어야 합니다.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 이 보장의 경계 — 반드시 읽을 것
 
-## How can I deploy this project?
+생략에 의한 보장은 **클라이언트 전용 기능**에 대한 것입니다. 편집 UI, 섹션 노출,
+버튼 — 이런 것들은 코드가 없으면 정말로 되살아나지 않습니다.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+**제어는 다릅니다.** 제어 블록을 빼면 버튼과 엔드포인트 주소는 사라지지만,
+그 계정이 들고 있는 자격증명 자체는 그대로입니다. 주소를 아는 사람이 `curl` 로
+직접 호출하면 장비는 움직입니다. 버튼을 지우는 것은 *권한*이 아니라 *수단*을
+지우는 것입니다.
 
-## Can I connect a custom domain to my Lovable project?
+> 제어 엔드포인트는 **서버에서 계정별로 막혀 있어야 합니다.**
+> 이 생성기는 그 위에 얹는 층이지, 그것을 대신하지 않습니다.
 
-Yes, you can!
+그 전제 위에서 이 방식이 실제로 보태주는 것:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- 모니터링 산출물에는 **제어 엔드포인트 주소조차 없습니다** — 어디를 호출해야
+  하는지가 노출되지 않습니다
+- 산출물을 diff 해서 "이 페이지에는 제어 코드가 없다"를 **증명**할 수 있습니다
+- 클라이언트 측 권한 우회라는 공격 유형 자체가 성립하지 않습니다
+- 산출물에 자격증명을 심지 않습니다. 제어 요청은 브라우저 세션 인증
+  (`credentials: 'include'`) 을 그대로 쓰므로, HTML 파일이 유출돼도 토큰이 새지 않습니다
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 블록 타입 추가하기
+
+고정된 것은 산출물/편집기 **구조**뿐이고, 블록은 전부 갈아끼울 수 있게 되어 있습니다.
+블록 하나에 필요한 모든 것 — 라벨, 아이콘, 기본 너비, 생성, 편집 UI, 산출물 마크업,
+런타임 스크립트/CSS — 이 `src/blocks/<이름>.tsx` 한 파일에 모여 있습니다.
+
+추가할 때 손대는 곳은 세 군데뿐입니다:
+
+1. `src/types/page-builder.ts` — 블록 인터페이스와 `ContentBlock` 유니온 한 줄
+2. `src/blocks/<이름>.tsx` — 정의 파일
+3. `src/blocks/index.ts` — `BLOCK_REGISTRY` 에 한 줄
+
+편집기 캔버스, 블록 추가 메뉴, 권한 패널, 격자 계산, 산출물 생성기는 전부 레지스트리를
+읽으므로 손댈 필요가 없습니다.
+
+```ts
+export const gaugeBlock = defineBlock<GaugeBlock>({
+  type: 'gauge',
+  label: '게이지',
+  icon: Gauge,
+  defaultSpan: 4,
+  create: (seed) => ({ ...seed, type: 'gauge', min: 0, max: 100, value: 0 }),
+  Editor: GaugeBlockComponent,
+  emit: (block) => `<div class="tsb-gauge" ...>`,
+  assets: () => ({ css: GAUGE_CSS, script: GAUGE_SCRIPT }),
+});
+```
+
+`assets` 의 스크립트/CSS는 **그 타입의 블록이 실제로 마크업을 내놓았을 때만** 산출물에
+들어갑니다. 권한에서 껐거나, 값이 비어 블록이 실리지 않았다면 따라가지 않습니다.
+
+## 격자 배치
+
+에디터 캔버스와 산출물 모두 12열 CSS Grid를 쓰고, 자리 계산은
+`resolveCellPlacement()` **한 함수**를 공유합니다. 배치 규칙이 갈라지면 편집 화면과
+결과물이 달라지는데, 페이지 빌더에서 그건 버그입니다.
+
+행 높이는 내용에 따라 늘어납니다. 드래그 드롭은 행 높이를 DOM에서 재서 대상 행을
+정하므로, 블록이 길어져도 아래 행을 덮지 않습니다.
+
+이미 차 있는 자리에 떨어뜨리면 그 위에 얹지 않고 **새 행을 끼워 넣습니다**
+(행의 위쪽 절반에 놓으면 위에, 아래쪽 절반이면 아래에). 열이 비어 있으면 같은 행에
+나란히 놓입니다. 어떤 경우에도 블록끼리 겹치지 않습니다.
+
+## 코드 구조
+
+| 경로 | 역할 |
+|---|---|
+| `src/types/page-builder.ts` | 페이지·블록·권한(`PageCapabilities`)·소스(`PageSource`) 타입 |
+| `src/lib/capabilities.ts` | 권한 기본값, 정규화(외부 입력 방어), 라벨 |
+| `src/lib/bake.ts` | 권한을 적용해 모델에서 콘텐츠를 **제거** |
+| `src/blocks/` | 블록 타입 레지스트리. 타입 하나당 파일 하나 |
+| `src/lib/emit-html.ts` | 구운 모델 → 자기완결 HTML. 문서 조립·CSS 가지치기·런타임 조각 수집 |
+| `src/lib/html-escape.ts` | 이스케이프와 URL 위생 (블록 정의와 공용) |
+| `src/lib/page-store.ts` | 보관함(localStorage) 접근과 형태 검사 |
+| `src/lib/grid.ts` | 12열 격자 계산·배치·드롭 계획. 에디터와 산출물이 **같은 함수**를 쓴다 |
+| `src/components/CapabilityPanel.tsx` | 권한 토글 UI + 게시 영향 요약 |
+| `src/components/PageActions.tsx` | 저장 / 게시 / 미리보기 / 소스 저장 / 가져오기 |
+
+`emitHtml`의 계약은 테스트로 고정되어 있습니다 (`src/test/emit-html.test.ts`):
+꺼진 권한에 해당하는 문자열은 반환된 HTML 어디에도 없어야 합니다.
+
+## 개발
+
+```sh
+npm install
+npm run dev      # 에디터 실행
+npm test         # 생성기 계약 테스트
+npm run lint
+npm run build
+```
+
+Vite · TypeScript · React · shadcn-ui · Tailwind CSS 로 만들어졌습니다.

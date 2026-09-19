@@ -1,38 +1,26 @@
 import { BlockType } from '@/types/page-builder';
+import { BLOCK_REGISTRY } from '@/blocks';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { 
-  Plus, 
-  Type, 
-  FileText, 
-  Image, 
-  Video, 
-  Code2, 
-  List, 
-  Minus 
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 interface AddBlockButtonProps {
   onAddBlock: (type: BlockType) => void;
+  /** 게시 권한으로 허용된 타입. 지정하면 그 외 타입은 추가할 수 없다. */
+  allowedTypes?: BlockType[];
 }
 
-const blockTypes: { type: BlockType; icon: React.ReactNode; label: string }[] = [
-  { type: 'heading', icon: <Type className="w-4 h-4" />, label: '제목' },
-  { type: 'text', icon: <FileText className="w-4 h-4" />, label: '텍스트' },
-  { type: 'image', icon: <Image className="w-4 h-4" />, label: '이미지' },
-  { type: 'video', icon: <Video className="w-4 h-4" />, label: '동영상' },
-  { type: 'code', icon: <Code2 className="w-4 h-4" />, label: '코드' },
-  { type: 'list', icon: <List className="w-4 h-4" />, label: '목록' },
-  { type: 'divider', icon: <Minus className="w-4 h-4" />, label: '구분선' },
-];
-
-export const AddBlockButton = ({ onAddBlock }: AddBlockButtonProps) => {
+export const AddBlockButton = ({ onAddBlock, allowedTypes }: AddBlockButtonProps) => {
   const [open, setOpen] = useState(false);
+
+  const available = allowedTypes
+    ? BLOCK_REGISTRY.filter(({ type }) => allowedTypes.includes(type))
+    : BLOCK_REGISTRY;
 
   const handleAddBlock = (type: BlockType) => {
     onAddBlock(type);
@@ -52,17 +40,22 @@ export const AddBlockButton = ({ onAddBlock }: AddBlockButtonProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2 bg-card border-border">
         <div className="grid grid-cols-2 gap-1">
-          {blockTypes.map(({ type, icon, label }) => (
+          {available.map(({ type, icon: Icon, label }) => (
             <Button
               key={type}
               variant="ghost"
               className="justify-start gap-2 h-10 hover:bg-primary/10 hover:text-primary"
               onClick={() => handleAddBlock(type)}
             >
-              {icon}
+              <Icon className="w-4 h-4" />
               {label}
             </Button>
           ))}
+          {available.length === 0 && (
+            <p className="col-span-2 p-3 text-xs text-muted-foreground text-center">
+              권한에서 모든 블록 타입이 꺼져 있습니다.
+            </p>
+          )}
         </div>
       </PopoverContent>
     </Popover>

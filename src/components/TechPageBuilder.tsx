@@ -1,6 +1,8 @@
 import { usePageBuilder } from '@/hooks/usePageBuilder';
 import { PageHeader } from '@/components/PageHeader';
 import { PageActions } from '@/components/PageActions';
+import { CapabilityPanel } from '@/components/CapabilityPanel';
+import { PageLibrary } from '@/components/PageLibrary';
 import { GridCanvas } from '@/components/blocks/GridCanvas';
 import { AddBlockButton } from '@/components/blocks/AddBlockButton';
 import { Button } from '@/components/ui/button';
@@ -9,7 +11,8 @@ import {
   Edit2, 
   Eye, 
   Layers,
-  Grid3X3
+  Grid3X3,
+  ShieldCheck
 } from 'lucide-react';
 import { TechPage } from '@/types/page-builder';
 
@@ -128,11 +131,22 @@ export const TechPageBuilder = () => {
     deleteBlock,
     moveBlock,
     updatePageMeta,
+    capabilities,
+    setCapabilities,
+    savedPages,
+    refreshSavedPages,
     savePage,
-    exportPage,
-    importPage,
+    loadPage,
+    deletePage,
+    newPage,
+    exportSource,
+    importSource,
+    publishHtml,
+    publishSummary,
     duplicatePage,
   } = usePageBuilder(defaultTemplate);
+
+  const bakeSummary = publishSummary();
 
   // 레이아웃 잠금 기능은 내부 코드로 유지 (추후 활용)
   const isLayoutLocked = false; // page.layoutLocked || false;
@@ -183,11 +197,30 @@ export const TechPageBuilder = () => {
 
             <div className="flex items-center gap-4">
               {/* Page Actions */}
+              <PageLibrary
+                pages={savedPages}
+                currentPageId={page.id}
+                onOpen={loadPage}
+                onDelete={deletePage}
+                onNew={newPage}
+                onRefresh={refreshSavedPages}
+              />
+
+              <CapabilityPanel
+                capabilities={capabilities}
+                summary={bakeSummary}
+                onChange={setCapabilities}
+              />
+
+              {/* Page Actions */}
               <PageActions
                 page={page}
+                capabilities={capabilities}
                 onSave={savePage}
-                onExport={exportPage}
-                onImport={importPage}
+                onExportSource={exportSource}
+                onImportSource={importSource}
+                onPublishHtml={publishHtml}
+                onPublishSummary={publishSummary}
                 onDuplicate={duplicatePage}
               />
 
@@ -221,6 +254,15 @@ export const TechPageBuilder = () => {
               <Grid3X3 className="w-4 h-4 text-primary" />
               <span>블록을 드래그하여 위치를 이동하고, 선택 후 너비를 조절할 수 있습니다.</span>
             </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <span>
+                게시하면 블록 {bakeSummary.keptBlocks}개가 자기완결 HTML로 구워집니다
+                {bakeSummary.removedBlocks > 0 &&
+                  ` — 권한이 꺼진 블록 ${bakeSummary.removedBlocks}개는 내용째 제외됩니다`}
+                .
+              </span>
+            </div>
           </div>
         )}
 
@@ -238,7 +280,10 @@ export const TechPageBuilder = () => {
         {/* Add Block Button */}
         {isEditMode && !isLayoutLocked && (
           <div className="pt-8">
-            <AddBlockButton onAddBlock={(type) => addBlock(type)} />
+            <AddBlockButton
+              onAddBlock={(type) => addBlock(type)}
+              allowedTypes={capabilities.allowedBlockTypes}
+            />
           </div>
         )}
 
